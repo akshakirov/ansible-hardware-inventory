@@ -1,0 +1,10 @@
+---
+- hosts: all
+  tasks:
+    - name: HW by ansible
+      debug: 
+        msg: 
+        - "CPU type: {{ ansible_processor[2] }}"
+        - "CPU count: {{ ansible_processor_count }}"
+        - "Mem total: {{ ansible_memory_mb.real.total }} MiB"
+
