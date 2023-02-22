@@ -1,0 +1,40 @@
+---
+- name: get hardware info
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: install lshw
+      become: true
+      ansible.builtin.package:
+        name: lshw
+        state: present
+
+    - name: get memory info
+      become: true
+      ansible.builtin.shell:
+        # yamllint disable-line rule:line-length
+        cmd: set -euxo pipefail && lshw -short -c memory | egrep "System Memory|DIMM" | grep -v empty | awk -F'memory' '{print $2}' | sort | uniq -c
+      args:
+        executable: /bin/bash
+      register: lshw_mem
+      changed_when: false
+
+    - name: print memory info
+      debug: var=lshw_mem.stdout_lines
+
+
+    - name: get CPU info
+      become: true
+      ansible.builtin.shell:
+        # yamllint disable-line rule:line-length
+        cmd: set -euxo pipefail && lshw -short -c cpu | grep processor | awk -F'processor' '{print $2}' | uniq -c
+      args:
+        executable: /bin/bash
+      register: lshw_cpu
+      changed_when: false
+
+    - name: print CPU info
+      debug: var=lshw_cpu.stdout_lines
+
+#    - name: get total
+#      debug: msg="total RAM is {{ ansible_memory_mb.real.total }}"
