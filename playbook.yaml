@@ -18,7 +18,6 @@
         executable: /bin/bash
       register: lshw_mem
       changed_when: false
-
     - name: print memory info
       debug: var=lshw_mem.stdout_lines
 
@@ -32,9 +31,17 @@
         executable: /bin/bash
       register: lshw_cpu
       changed_when: false
-
     - name: print CPU info
       debug: var=lshw_cpu.stdout_lines
+
+
+    - name: all together
+      vars: 
+        msg: |
+          {{ lshw_cpu.stdout_lines | to_nice_json }}
+          {{ lshw_mem.stdout_lines | to_nice_json }}
+      debug:
+        msg: "{{ msg.split('\n') }}"
 
 #    - name: get total
 #      debug: msg="total RAM is {{ ansible_memory_mb.real.total }}"
