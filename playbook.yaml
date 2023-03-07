@@ -12,57 +12,28 @@
           - nvme-cli
           - smartmontools
         state: present
-    - name: get system
-      become: true
-      ansible.builtin.shell:
-        cmd: lshw -short -c system | grep system | grep -v 'PnP device' | awk -F'system' '{print $2}'
-      args:
-        executable: /bin/bash
-      register: lshw_sys
-      changed_when: false
 
-    - name: get memory info
-      become: true
-      ansible.builtin.shell:
-        cmd: |
-          set -euxo pipefail
-          lshw -short -c memory | egrep "System Memory|DIMM" | grep -v empty | awk -F'memory' '{print $2}' | sort | tr -s ' ' | uniq -c
-      args:
-        executable: /bin/bash
-      register: lshw_mem
-      changed_when: false
-
-    - name: get CPU info
-      become: true
-      ansible.builtin.shell:
-        cmd: |
-          set -euxo pipefail
-          lshw -short -c cpu | grep processor | awk -F'processor' '{print $2}' | tr -s ' ' | uniq -c
-      args:
-        executable: /bin/bash
-      register: lshw_cpu
-      changed_when: false
-
-    - name: get disk info
+    - name: get information
       become: true
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
-          echo 'NVMe disks'
-          nvme list -o json | grep ModelNumber | awk -F'"' '{print $4}' | sort | uniq -c
-          echo 'sata/sas behind HP HBA'
-          set -o pipefail && for disk in `ls /dev/sg*`;do smartctl -a $disk | grep "Device Model" | tr -s ' ' | awk -F':' '{print $2}'; done |sort | uniq -c || echo ""
+          lshw -short -c system | grep system | grep -v 'PnP device' | awk -F'system' '{print $2}'
+          lshw -short -c memory | egrep "System Memory|DIMM" | grep -v empty | awk -F'memory' '{print $2}' | sort | tr -s ' ' | uniq -c
+          lshw -short -c cpu | grep processor | awk -F'processor' '{print $2}' | tr -s ' ' | uniq -c
+          nvme list -o json | grep ModelNumber | awk -F'"' '{print $4}' | sort | tr -s ' ' | uniq -c || :
+          for disk in `find /dev/ -name sg*`;do smartctl -a $disk | grep "User Capacity" -B4 | egrep 'Device Model|Product'; done | awk -F':' '{print $2}' | sort | tr -s ' ' | uniq -c || :
+          echo "----------lsblk---------"
+          #lsblk -d -o MODEL | tail -n +2 | awk 'NF' | sort | uniq -c # | egrep "sata|sas|nvme"
+          lsblk -d -o NAME,MODEL,SERIAL,SIZE | egrep -v "loop[[:digit:]]|zd[[:digit:]]|drbd[[:digit:]]|sr[[:digit:]]"
       args:
         executable: /bin/bash
-      register: lshw_dsk
+      register: lshw
       changed_when: false
 
     - name: Hardware information
       vars:
         msg: |
-          {{ lshw_sys.stdout_lines | to_nice_yaml(indent=8, width=1337) }}
-          {{ lshw_cpu.stdout_lines | to_nice_yaml(indent=8, width=1337) }}
-          {{ lshw_mem.stdout_lines | to_nice_yaml(indent=8, width=1337) }}
-          {{ lshw_dsk.stdout_lines | to_nice_yaml(indent=8, width=1337) }}
+          {{ lshw.stdout_lines | to_nice_yaml(indent=8, width=1337) }}
       debug:
         msg: "{{ msg.split('\n') }}"
