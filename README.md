@@ -1,3 +1,5 @@
+This ansible playbook gets a hardware inventory from servers. Such as Platform, Memory (total and physical RAM-modules), CPU and disks (SATA/SAS/NVMe)
+
 This playbook uses:
 lshw 
 nvme-cli
